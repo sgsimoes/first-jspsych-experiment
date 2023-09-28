@@ -75,7 +75,7 @@ var prime = {
   choices : "NO_KEYS",
   stimulus_width : 500,
   maintain_aspect_ratio : true, 
-  prompt : "<br>foobly<br>"
+  prompt : jsPsych.timelineVariable('prime_word')
 }
 
 var target = {
@@ -83,10 +83,18 @@ var target = {
   stimulus: jsPsych.timelineVariable('image_path'),
   choices : ['A','L'],
   stimulus_width : 500,
-  maintain_aspect_ratio : true
+  maintain_aspect_ratio : true,
+  prompt: jsPsych.timelineVariable('target_word')
 }
 
-jsPsych.run([training_plus_association])
+var priming_proc = {
+  timeline: [fixation, image, prime, target],
+  timeline_variables: practice_stimuli,
+  randomize_order: true
+}
+
+
+jsPsych.run([training_plus_association, priming_proc])
 //jsPsych.run([sentence, attention, association, fixation, image, prime, target]);
     </script>
 </html>
