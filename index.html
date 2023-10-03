@@ -15,7 +15,18 @@
     </head>
     <body></body>
     <script>
-        const jsPsych = initJsPsych();
+        const jsPsych = initJsPsych(
+          {
+            on_finish: function(data) {
+                jsPsych.data.displayData();
+            }
+            }
+        );
+
+  //generate random ID
+
+  var id = Math.floor(Math.random() * 1000000000);
+  console.log("id=", id)
 
 var initial_instructions = {
   type: jsPsychInstructions,
@@ -24,7 +35,10 @@ var initial_instructions = {
     'page 2 instructions',
     'page 3 instructions.'
   ],
-  show_clickable_nav: true
+  show_clickable_nav: true,
+  data: {
+        typeoftrial: 'instructions',
+  }
 }
 
 var association_instructions = {
@@ -32,7 +46,10 @@ var association_instructions = {
   pages: [
     'Done with sentences. Association time.',
   ],
-  show_clickable_nav: true
+  show_clickable_nav: true,
+  data: {
+        typeoftrial: 'instructions',
+  }
 }
 
 var priming_instructions = {
@@ -40,7 +57,10 @@ var priming_instructions = {
   pages: [
     'Priming task about to begin.',
   ],
-  show_clickable_nav: true
+  show_clickable_nav: true,
+  data: {
+        typeoftrial: 'instructions',
+  }
 }
 
 var sentence_number = 0;
@@ -53,6 +73,13 @@ var sentence = {
   on_finish: function(data) {
     sentence_number = (sentence_number + 1) %40;
     console.log("sentence_number= " + sentence_number)
+  },
+  data: {
+        typeoftrial: 'sentence', 
+        sentence: jsPsych.timelineVariable('sentence'),
+        novel1: jsPsych.timelineVariable('novel1'),
+        novel2: jsPsych.timelineVariable('novel2'),
+        novel3: jsPsych.timelineVariable('novel3'),
   }
 }
 
@@ -63,7 +90,31 @@ console.log("random_attention_trials= " + random_attention_trials)
 var attention = {
     type: jsPsychSurveyText,
     questions: [
-    {prompt: "Type any ONE novel word from the previous sentence:"}]
+    {prompt: "Type any ONE novel word from the previous sentence:"}],
+  data: {
+        typeoftrial: 'attention',
+  },
+  on_finish: function(data){
+    var last_trial_data = jsPsych.data.get().filter({typeoftrial:'sentence'}).last(1).values()[0];
+    console.log("last_trial_data= ", last_trial_data);
+
+    data.novel1 = last_trial_data.novel1;
+    data.novel2 = last_trial_data.novel2;
+    data.novel3 = last_trial_data.novel3;
+    data.response = data.response.Q0;
+
+    if(
+      jsPsych.pluginAPI.compareKeys(data.response, data.novel1) ||
+      jsPsych.pluginAPI.compareKeys(data.response, data.novel2) ||
+      jsPsych.pluginAPI.compareKeys(data.response, data.novel3)
+     ){
+      data.correct = 1;
+      console.log("correct= " + data.correct);
+     } else {
+      data.correct = 0;
+      console.log("correct= " + data.correct);
+     }
+  }
 }
 
 var attention_conditional = {
@@ -83,6 +134,13 @@ var training_procedure = {
 var association = {
     type: jsPsychSurveyText,
     questions: [{prompt: jsPsych.timelineVariable('cue')}],
+  data: {
+        typeoftrial: 'association',
+        cue: jsPsych.timelineVariable('cue')
+  },
+  on_finish: function(data){
+    data.response = data.response.Q0
+  }
 }
 
 var association_procedure = {
@@ -101,14 +159,20 @@ var slow_experiment_trial = {
   type: jsPsychHtmlKeyboardResponse,
   stimulus: "<b>Too slow</b>! <br><br> Please try to respond faster.",
   choices: "NO KEYS",
-  trial_duration: 1000
+  trial_duration: 1000,
+  data: {
+        typeoftrial: 'feedback',
+  }
 }
 
 var fixation = {
   type: jsPsychHtmlKeyboardResponse,
   stimulus: "+",
   trial_duration : 500,
-  choices : "NO_KEYS"
+  choices : "NO_KEYS",
+  data: {
+        typeoftrial: 'fixation',
+  }
 }
 
 var image = {
@@ -118,7 +182,10 @@ var image = {
   choices : "NO_KEYS",
   stimulus_width : 500,
   maintain_aspect_ratio : true,
-  prompt: "<br><br>"
+  prompt: "<br><br>",
+  data: {
+        typeoftrial: 'image',
+  }
 }
 
 var prime = {
@@ -131,6 +198,9 @@ var prime = {
   prompt : function(){
     return "<span style= 'font-size:200%'><br>" + String(jsPsych.timelineVariable('prime_word')) + "<br></span>";
   },
+  data: {
+        typeoftrial: 'prime',
+  }
 }
 
 var target = {
@@ -142,6 +212,17 @@ var target = {
   prompt : function(){
     return "<span style= 'font-size:200%'><br>" + String(jsPsych.timelineVariable('target_word')) + "<br></span>";
   },
+  data: {
+        typeoftrial: 'target',
+        target: jsPsych.timelineVariable('target_word'),
+        prime: jsPsych.timelineVariable('prime_word'),
+        type: jsPsych.timelineVariable('type'),
+        relatedness: jsPsych.timelineVariable('relatedness'),
+        correct_key: jsPsych.timelineVariable('correct_key'),
+  },
+  on_finish: function(data){
+    data.correct = jsPsych.pluginAPI.compareKeys(data.response, data.correct_key);
+  }
 }
 
 var priming_feedback = { 
@@ -163,7 +244,7 @@ var priming_proc = {
 }
 
 
-jsPsych.run([priming_proc])
+jsPsych.run([training_procedure])
 //jsPsych.run([sentence, attention, association, fixation, image, prime, target]);
     </script>
 </html>
