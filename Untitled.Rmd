@@ -1,0 +1,59 @@
+---
+title: "rstudio-day1"
+output: html_document
+date: "2023-10-17"
+---
+
+# install packages
+
+```{r}
+install.packages("tidyverse")
+```
+
+# load packages
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+view(iris)
+```
+
+# plot iris
+
+```{r}
+ggplot(data = iris)+
+  geom_point(mapping = aes(x = Petal.Width, y = Petal.Length, color = Species, size = Species, shape = Species))
+
+ggplot(data = iris)+
+  geom_line(mapping = aes(x = Sepal.Width, y = Sepal.Length, color = Species, size = Species, shape = Species))
+```
+
+```{r}
+ggplot(data = iris)+
+  geom_col(mapping = aes(x = Species, y = Petal.Length), fill = "skyblue")+theme_classic()
+```
+
+# load class data
+
+```{r}
+savic = read_csv("class_data (2).csv")
+
+view(savic)
+```
+
+# basic info
+
+```{r}
+nrow(savic)
+
+ncol(savic)
+
+colnames(savic)
+
+ggplot(data = savic)+
+  geom_histogram(mapping = aes(x= as.numeric(rt)))
+
+range(as.numeric(savic$rt))
+```
