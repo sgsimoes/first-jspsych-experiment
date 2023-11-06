@@ -57,3 +57,183 @@ ggplot(data = savic)+
 
 range(as.numeric(savic$rt))
 ```
+
+
+# tidyverse verbs
+
+```{R}
+objectdata = read_csv("objectdata.csv") %>%
+  mutate(rt = as.numeric(rt),
+         weight = as.factor(weight),
+         shape = as.factor(shape))
+
+ncol(objectdata)
+nrow(objectdata)
+
+condition_data = objectdata %>%
+  filter(typeoftrial == "picture" & weight %in% c("Heavy", "Light") & shape %in% c("Normal", "Smashed") & correct == TRUE) %>%
+  select(subject, rt, weight, shape)
+
+
+object_agg = condition_data %>%
+  group_by(weight, shape) %>%
+  summarize(mean_rt = mean(rt),
+            sd_rt = sd(rt))
+
+ggplot(data = object_agg) +
+  geom_col(mapping = aes(x = shape, y = mean_rt, fill = weight),
+           position = "dodge")+
+theme_bw()+
+  labs(title = "plot of RTs")+
+  scale_fill_grey()
+```
+
+# load revised class data
+
+```{r}
+savic = read_csv("final_class_data.csv") %>%
+  mutate(rt = as.numeric(rt),
+         relatedness = as.factor(relatedness),
+         type = as.factor(type))
+```
+
+# basic descriptives
+
+```{r}
+nrow(savic)
+levels(savic$relatedness)
+
+savic %>% group_by(ID) %>% count()
+
+savic %>% filter(typeoftrial == "target") %>%
+  group_by(ID) %>% count()
+
+savic %>% filter(typeoftrial == "target") %>%
+  pull(rt)
+
+savic %>% 
+  pull(ID) %>% unique()
+
+savic %>% 
+  pull(ID) %>% unique() %>% length()
+```
+
+# attention
+
+```{r}
+attention_trials = savic %>% filter(typeoftrial == "attention")
+
+# select picks out columns
+attention_trials = savic %>% filter(typeoftrial == "attention") %>% select(ID, revised_response, novel1, novel2, novel3, revised_correct)
+
+## mean
+attention_trials %>% 
+  summarize(mean_accuracy = mean(revised_correct), sd_accuracy = sd(revised_correct))
+
+## summarize participant accuracy
+
+subject_attention_accuracy = attention_trials %>%
+  group_by(ID) %>%
+  summarize(mean_accuracy = mean(revised_correct))
+
+# find IDs that have less than 75% accuracy
+low_acc_IDs = subject_attention_accuracy %>%
+  filter(mean_accuracy < 0.75) %>%
+  pull(ID)
+# 19 people have low accuracy
+```
+
+# priming trials filtering
+
+```{r}
+priming_data = savic %>% filter(typeoftrial == "target")
+
+priming_data = savic %>% filter(typeoftrial == "target") %>%
+select(ID, rt, relatedness, prime, response, type, correct, block_number, target, correct_key) %>%
+filter(!is.na(rt), rt > 200, rt < 1500, correct = TRUE, block_number == 1) %>% 
+  filter(relatedness %in% c("related", "unrelated") & type %in% c("direct", "shared")) %>%
+  filter(!ID %in% low_acc_IDs)
+```
+
+# plot
+
+```{r}
+priming_data %>%
+  group_by(type, relatedness) %>%
+  summarize(mean_rt = mean(rt)) %>%
+  ggplot() +
+  geom_col(mapping = aes(x = type, y = mean_rt,
+          group = relatedness, fill = relatedness),
+           position = "dodge")+
+  theme_bw()+
+  scale_fill_grey()
+
+
+```
+
+# association
+
+```{r}
+scoring = read_csv("association_scoring.csv")%>%
+  arrange(cue,response)
+
+association_trials = savic %>%
+  filter(typeoftrial == "association") %>%
+  select(ID, revised_response, cue) %>%
+  rename(response = "revised_response") %>%
+  mutate(response = tolower(response)) %>%
+  left_join(scoring)
+
+congruence_trials = association_trials %>%
+  filter(!is.na(congruence))%>%
+  filter(congruence %in% c("congruent", "incongruent")) %>%
+  filter(type_of_association %in% c("direct", "shared"))
+
+congruence_counts = congruence_trials %>%
+  group_by(ID, cue_type, congruence, type_of_association) %>%
+  count() %>%
+  group_by(ID, cue_type) %>%
+  mutate(proportion = n / sum(n))
+
+congruence_counts %>%
+  filter(congruence == "congruent") %>%
+  ungroup()%>%
+  summarize(mean_prop = mean(proportion))
+
+wide_counts = congruence_counts %>%
+  select(ID, cue_type, congruence, type_of_association, proportion)%>%
+  pivot_wider(names_from = congruence, values_from = proportion) %>%
+  mutate(incongruent = ifelse(is.na(incongruent), 0, incongruent), congruent = ifelse(is.na(congruent), 0, congruent))%>%
+  mutate(prop = congruent - incongruent)
+
+mean(wide_counts$prop)
+
+## counts by type of association
+
+association_type_occurrence = wide_counts %>%
+  select(ID, cue_type, type_of_association, prop) %>%
+  pivot_wider(names_from = type_of_association, values_from = prop) %>%
+  mutate(shared = ifelse(is.na(shared), 0, shared), direct = ifelse(is.na(direct), 0, direct))
+
+mean(association_type_occurrence$direct)
+mean(association_type_occurrence$shared)
+
+```
+
+# linear models
+
+```{r}
+data(women)
+
+women %>%
+  ggplot(aes(x= weight, y= height))+ 
+  geom_point() +
+  geom_smooth(method = "lm")+
+  theme_classic()
+
+women_model = lm(data = women, height ~ weight)
+summary(women_model)
+```
+
+
+
