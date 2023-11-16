@@ -233,7 +233,125 @@ women %>%
 
 women_model = lm(data = women, height ~ weight)
 summary(women_model)
+
+sd(women$height)
+sd(women$weight)
+
+women = women %>%
+  mutate(z_height = scale(height), z_weight = scale(weight))
+
+mean(women$z_height)
+mean(women$z_weight)
+
+sd(women$z_height)
+sd(women$z_weight)
+
+women_model_2 = lm(data = women, z_height ~ z_weight)
+summary(women_model_2)
+
+# correlation is the slope of line in our regression
+
+women %>%
+  summarize(r = cor(z_height, z_weight))
+
+women %>%
+  summarize(r = cor(height, weight))
+
+
 ```
 
+# revisiting iris
 
+```{r}
+data("iris")
+view(iris)
+
+iris_subset = iris %>%
+  filter(Species %in% c("setosa", "virginica"))
+
+iris_subset %>%
+  ggplot(aes(x = Species, y = Petal.Length))+
+  geom_boxplot()
+
+# comparing setosa and virginica
+
+iris_subset_lm = lm(data = iris_subset, Petal.Length ~ Species)
+summary(iris_subset_lm)
+
+t.test(Petal.Length ~ Species, data = iris_subset)
+
+# mean petal length of each group can be found by adding the estimates to the y-intercept
+
+full_iris_model = lm(data = iris, Petal.Length ~ Species)
+summary(full_iris_model)
+
+full_iris_aov = aov(data = iris, Petal.Length ~ Species)
+summary(full_iris_aov)
+
+install.packages("emmeans")
+
+emmeans::emmeans(full_iris_model, 
+                 pairwise ~ Species,
+                 adjust="tukey")
+```
+
+```{r}
+
+# below are assumptions
+
+# linearity: the relationship is actually linear in nature
+
+# residuals: everything in your data that your model can't explain; once you take away the independent variable, the data should be normally distributed
+
+# homoskedasticity: the variance in each group is the same
+
+# independence of the observations: every data point is measuring something different (not the case in our study because each participant does every condition)
+```
+
+```{r}
+install.packages("performance", dependencies = TRUE)
+install.packages("see", dependencies = TRUE)
+install.packages("patchwork", dependencies = TRUE)
+
+library(performance)
+check_model(full_iris_model)
+
+install.packages("datarium")
+data("jobsatisfaction", package = "datarium")
+View(jobsatisfaction)
+
+jobsatisfaction %>%
+  ggplot()+
+  geom_boxplot(aes(x = gender, y = score, color = education_level))
+
+job_model = (lm(data = jobsatisfaction, score ~ gender + education_level + gender:education_level))
+summary(job_model)
+
+install.packages("car")
+
+emmeans::emmeans(job_model,
+                 pairwise ~ gender | education_level, adjust="tukey")
+
+
+check_model(job_model)
+
+```
+
+```{r}
+# run a multiple regression model on the priming data
+
+rt_lm_model = lm(data = priming_data, rt ~ type + relatedness + type:relatedness)
+summary(rt_lm_model)
+check_model(rt_lm_model)
+
+
+# run a linear mixed effects model
+
+library(lmerTest)
+rt_model = lmer(data = priming_data, rt ~ relatedness*type + (1|ID))
+
+summary(rt_model)
+
+car::Anova(rt_model)
+```
 
